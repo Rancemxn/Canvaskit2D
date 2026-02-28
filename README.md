@@ -30,7 +30,37 @@ canvas2d-standalone/
 
 ## 快速开始
 
-### 1. 直接打开演示
+### 1. 快速引用 (CDN 模式)
+
+直接引用 GitHub 托管的资源，无需下载任何文件
+
+```html
+<!-- 引入核心 JS -->
+<script src="https://rancemxn.github.io/Canvaskit2D/canvas2d.js"></script>
+
+<canvas id="myCanvas" width="500" height="300"></canvas>
+
+<script>
+  async function run() {
+    await Canvas2D.init({
+      canvaskitPath: 'https://rancemxn.github.io/Canvaskit2D/canvaskit/',
+      fontsPath: 'https://rancemxn.github.io/Canvaskit2D/fonts/'
+    });
+
+    const canvas = document.getElementById('myCanvas');
+    const ctx = Canvas2D.createCanvasContext(canvas);
+
+    ctx.fillStyle = 'gradient';
+    ctx.font = '30px Roboto';
+    ctx.fillText('Hello CanvasKit!', 50, 50);
+    
+    ctx.flush();
+  }
+  run();
+</script>
+```
+
+### 2. 直接打开演示
 
 使用 HTTP 服务器运行（因为 WASM 需要通过 HTTP 加载）：
 
@@ -47,7 +77,7 @@ php -S localhost:8080
 
 然后在浏览器中打开 `http://localhost:8080`
 
-### 2. 集成到你的项目
+### 3. 集成到你的项目
 
 ```html
 <!DOCTYPE html>
