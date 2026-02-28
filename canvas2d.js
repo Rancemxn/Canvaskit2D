@@ -18,7 +18,7 @@
   const config = {
     canvaskitPath: './canvaskit/',
     fontsPath: './fonts/',
-    fonts: ['Roboto-Regular.woff2', 'NotoSans-Regular.woff2']
+    fonts: ['default-zh_cn.ttf','Roboto-Regular.woff2', 'NotoSans-Regular.woff2']
   };
 
   /**
@@ -123,41 +123,32 @@
    * Load fonts from configured path
    */
   async function loadFonts() {
+    const fontBuffers = [];
+
     for (const fontFile of config.fonts) {
       try {
         const response = await fetch(config.fontsPath + fontFile);
         if (!response.ok) continue;
         
         const data = await response.arrayBuffer();
-        const bytes = new Uint8Array(data);
-        
-        // Try MakeFreeTypeFaceFromData first (works with woff2)
-        if (CanvasKit.Typeface?.MakeFreeTypeFaceFromData) {
-          DefaultTypeface = CanvasKit.Typeface.MakeFreeTypeFaceFromData(bytes);
-        }
-        
-        // Fallback to MakeFromData
-        if (!DefaultTypeface && CanvasKit.Typeface?.MakeFromData) {
-          DefaultTypeface = CanvasKit.Typeface.MakeFromData(bytes);
-        }
-        
-        // Verify typeface works
-        if (DefaultTypeface) {
-          try {
-            const testFont = new CanvasKit.Font(DefaultTypeface, 12);
-            const glyphs = testFont.getGlyphIDs?.('Test');
-            const widths = testFont.getGlyphWidths?.(glyphs);
-            let total = 0;
-            if (widths) for (let w of widths) total += w;
-            testFont.delete?.();
-            if (total > 0) {
-              FontLoaded = true;
-              break;
-            }
-          } catch (e) {}
-        }
+        fontBuffers.push(new Uint8Array(data));
       } catch (e) {
-        // Continue to next font
+        console.warn(`error load font: ${fontFile}`, e);
+      }
+    }
+
+    if (fontBuffers.length > 0) {
+      try {
+        FontMgr = CanvasKit.FontMgr.FromData(...fontBuffers);
+        global.FontMgr = FontMgr;
+
+        if (CanvasKit.Typeface.MakeFreeTypeFaceFromData) {
+          DefaultTypeface = CanvasKit.Typeface.MakeFreeTypeFaceFromData(fontBuffers[0]);
+        }
+        
+        FontLoaded = true;
+      } catch (e) {
+        console.error("创建 FontMgr 失败", e);
       }
     }
   }
@@ -966,7 +957,11 @@
         this._font.setSize(fontSize);
 
         if (FontMgr) {
-          const typeface = FontMgr.matchFamilyStyle(fontFamily, { weight: fontWeight, width: 5, slant: isItalic ? 1 : 0 });
+          const typeface = FontMgr.matchFamilyStyle(fontFamily, { 
+            weight: fontWeight, 
+            width: 5, 
+            slant: isItalic ? 1 : 0 
+          });
           if (typeface) this._font.setTypeface(typeface);
           else if (DefaultTypeface) this._font.setTypeface(DefaultTypeface);
         } else if (DefaultTypeface) {
