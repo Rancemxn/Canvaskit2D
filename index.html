@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas2D - CanvasKit-WASM 实现</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      background: linear-gradient(90deg, #00d4ff, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      border-radius: 10px;
+      padding: 20px;
+      color: #ef4444;
+      text-align: center;
+    }
+    .demo-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .demo-btn {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 20px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+    }
+    .demo-btn:hover { background: rgba(255,255,255,0.2); }
+    .demo-btn.active { background: linear-gradient(135deg, #00d4ff, #7c3aed); }
+    .canvas-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+    .canvas-wrapper {
+      text-align: center;
+    }
+    .canvas-wrapper h3 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+    .canvas-wrapper.native h3 { color: #10b981; }
+    .canvas-wrapper.ck h3 { color: #8b5cf6; }
+    .canvas-box {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    canvas {
+      display: block;
+      border-radius: 5px;
+    }
+    .api-doc {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 25px;
+      margin-top: 30px;
+    }
+    .api-doc h2 {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      color: #00d4ff;
+    }
+    .api-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .api-category {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 15px;
+    }
+    .api-category h3 {
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      color: #7c3aed;
+    }
+    .api-category ul {
+      list-style: none;
+      font-size: 0.85rem;
+    }
+    .api-category li {
+      padding: 4px 0;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>CanvasRenderingContext2D - CanvasKit-WASM 实现</h1>
+    <p class="subtitle">使用 CanvasKit-WASM 完整实现 Canvas 2D API - 对比原生 Canvas</p>
+
+    <div id="status" class="loading">
+      <div class="spinner"></div>
+      <p>正在加载 CanvasKit-WASM 和字体...</p>
+    </div>
+
+    <div id="main" style="display:none;">
+      <div class="demo-buttons" id="buttons"></div>
+      <div class="canvas-container">
+        <div class="canvas-wrapper native">
+          <h3>原生 Canvas 2D</h3>
+          <div class="canvas-box">
+            <canvas id="nativeCanvas" width="400" height="100"></canvas>
+          </div>
+        </div>
+        <div class="canvas-wrapper ck">
+          <h3>CanvasKit-WASM</h3>
+          <div class="canvas-box">
+            <canvas id="ckCanvas" width="400" height="100"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="api-doc">
+        <h2>已实现的 API</h2>
+        <div class="api-grid">
+          <div class="api-category">
+            <h3>绘制方法</h3>
+            <ul>
+              <li>fillRect</li><li>strokeRect</li><li>clearRect</li>
+              <li>fill</li><li>stroke</li>
+              <li>fillText</li><li>strokeText</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>路径方法</h3>
+            <ul>
+              <li>beginPath</li><li>closePath</li><li>moveTo</li><li>lineTo</li>
+              <li>arc</li><li>arcTo</li><li>ellipse</li>
+              <li>rect</li><li>roundRect</li>
+              <li>bezierCurveTo</li><li>quadraticCurveTo</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>变换方法</h3>
+            <ul>
+              <li>translate</li><li>rotate</li><li>scale</li>
+              <li>transform</li><li>setTransform</li>
+              <li>resetTransform</li><li>getTransform</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>状态管理</h3>
+            <ul>
+              <li>save</li><li>restore</li><li>reset</li>
+              <li>clip</li><li>isPointInPath</li><li>isPointInStroke</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>渐变和图案</h3>
+            <ul>
+              <li>createLinearGradient</li>
+              <li>createRadialGradient</li>
+              <li>createConicGradient</li>
+              <li>createPattern</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>图像操作</h3>
+            <ul>
+              <li>drawImage</li><li>createImageData</li>
+              <li>getImageData</li><li>putImageData</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>属性</h3>
+            <ul>
+              <li>fillStyle</li><li>strokeStyle</li>
+              <li>lineWidth</li><li>lineCap</li><li>lineJoin</li>
+              <li>font</li><li>textAlign</li><li>textBaseline</li>
+              <li>globalAlpha</li><li>globalCompositeOperation</li>
+              <li>shadowColor/Blur/Offset</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>CanvasKit-WASM v0.40.0 | CanvasRenderingContext2D Implementation | Standalone Version</p>
+    </div>
+  </div>
+
+  <script src="canvas2d.js"></script>
+  <script>
+    const demos = [
+      {
+        name: '矩形绘制',
+        draw: (ctx) => {
+          ctx.fillStyle = 'rgb(200, 0, 0)';
+          ctx.fillRect(10, 10, 50, 50);
+          ctx.fillStyle = 'rgba(0, 0, 200, 0.5)';
+          ctx.fillRect(30, 30, 50, 50);
+          ctx.strokeStyle = 'green';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(100, 10, 50, 50);
+          ctx.fillStyle = 'orange';
+          ctx.fillRect(170, 10, 60, 60);
+          ctx.clearRect(180, 20, 40, 40);
+          ctx.beginPath();
+          ctx.roundRect(250, 10, 60, 50, 10);
+          ctx.fillStyle = 'purple';
+          ctx.fill();
+        }
+      },
+      {
+        name: '路径绘制',
+        draw: (ctx) => {
+          ctx.beginPath();
+          ctx.moveTo(50, 10);
+          ctx.lineTo(100, 70);
+          ctx.lineTo(10, 70);
+          ctx.closePath();
+          ctx.fillStyle = 'coral';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(150, 40, 30, 0, Math.PI * 2);
+          ctx.fillStyle = 'dodgerblue';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(220, 40, 30, 0, Math.PI * 1.5);
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(280, 70);
+          ctx.bezierCurveTo(280, 20, 340, 20, 340, 70);
+          ctx.strokeStyle = 'green';
+          ctx.stroke();
+        }
+      },
+      {
+        name: '渐变',
+        draw: (ctx) => {
+          const lg = ctx.createLinearGradient(10, 10, 100, 80);
+          lg.addColorStop(0, 'red');
+          lg.addColorStop(0.5, 'yellow');
+          lg.addColorStop(1, 'blue');
+          ctx.fillStyle = lg;
+          ctx.fillRect(10, 10, 90, 70);
+          const rg = ctx.createRadialGradient(180, 45, 5, 180, 45, 40);
+          rg.addColorStop(0, 'white');
+          rg.addColorStop(0.5, 'yellow');
+          rg.addColorStop(1, 'red');
+          ctx.fillStyle = rg;
+          ctx.beginPath();
+          ctx.arc(180, 45, 40, 0, Math.PI * 2);
+          ctx.fill();
+          try {
+            const cg = ctx.createConicGradient(0, 280, 45);
+            cg.addColorStop(0, 'red');
+            cg.addColorStop(0.25, 'yellow');
+            cg.addColorStop(0.5, 'green');
+            cg.addColorStop(0.75, 'blue');
+            cg.addColorStop(1, 'red');
+            ctx.fillStyle = cg;
+            ctx.beginPath();
+            ctx.arc(280, 45, 35, 0, Math.PI * 2);
+            ctx.fill();
+          } catch (e) {
+            ctx.fillStyle = 'gray';
+            ctx.beginPath();
+            ctx.arc(280, 45, 35, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      },
+      {
+        name: '文本绘制',
+        draw: (ctx) => {
+          ctx.font = '24px Arial';
+          ctx.fillStyle = 'black';
+          ctx.fillText('Hello Canvas!', 10, 30);
+          ctx.font = '18px Georgia';
+          ctx.strokeStyle = 'blue';
+          ctx.strokeText('Stroke Text', 10, 60);
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = 'red';
+          ctx.textAlign = 'left';
+          ctx.fillText('Left aligned', 150, 25);
+          ctx.textAlign = 'center';
+          ctx.fillText('Center aligned', 250, 45);
+          ctx.textAlign = 'right';
+          ctx.fillText('Right aligned', 350, 65);
+          ctx.textAlign = 'left';
+          ctx.strokeStyle = 'black';
+          ctx.beginPath();
+          ctx.moveTo(10, 85);
+          ctx.lineTo(350, 85);
+          ctx.stroke();
+        }
+      },
+      {
+        name: '变换',
+        draw: (ctx) => {
+          ctx.fillStyle = 'red';
+          ctx.fillRect(0, 0, 30, 30);
+          ctx.translate(50, 0);
+          ctx.fillStyle = 'blue';
+          ctx.fillRect(0, 0, 30, 30);
+          ctx.translate(60, 30);
+          ctx.rotate(Math.PI / 4);
+          ctx.fillStyle = 'green';
+          ctx.fillRect(-15, -15, 30, 30);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(1.5, 1);
+          ctx.fillStyle = 'purple';
+          ctx.fillRect(200, 20, 40, 40);
+        }
+      },
+      {
+        name: '样式和阴影',
+        draw: (ctx) => {
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetX = 5;
+          ctx.shadowOffsetY = 5;
+          ctx.fillStyle = 'red';
+          ctx.fillRect(20, 20, 60, 60);
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = 'blue';
+          ctx.fillRect(50, 50, 60, 60);
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = 'green';
+          ctx.lineWidth = 5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(150, 20);
+          ctx.lineTo(250, 80);
+          ctx.stroke();
+          ctx.setLineDash([10, 5]);
+          ctx.strokeStyle = 'purple';
+          ctx.beginPath();
+          ctx.moveTo(270, 20);
+          ctx.lineTo(370, 80);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      },
+      {
+        name: '虚线',
+        draw: (ctx) => {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'purple';
+          ctx.setLineDash([10, 5]);
+          ctx.beginPath();
+          ctx.moveTo(10, 20);
+          ctx.lineTo(380, 20);
+          ctx.stroke();
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(10, 40);
+          ctx.lineTo(380, 40);
+          ctx.stroke();
+          ctx.setLineDash([20, 5, 5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(10, 60);
+          ctx.lineTo(380, 60);
+          ctx.stroke();
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath();
+          ctx.moveTo(10, 80);
+          ctx.lineTo(380, 80);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      },
+      {
+        name: '合成模式',
+        draw: (ctx) => {
+          ctx.fillStyle = 'blue';
+          ctx.fillRect(20, 20, 60, 60);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = 'red';
+          ctx.beginPath();
+          ctx.arc(60, 60, 30, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalCompositeOperation = 'xor';
+          ctx.fillStyle = 'green';
+          ctx.beginPath();
+          ctx.arc(150, 50, 30, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'blue';
+          ctx.fillRect(130, 30, 40, 40);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+      },
+      {
+        name: '透明度',
+        draw: (ctx) => {
+          ctx.fillStyle = 'black';
+          ctx.fillRect(0, 0, 400, 100);
+          ctx.fillStyle = 'rgba(255, 0, 0, 1)';
+          ctx.beginPath();
+          ctx.arc(60, 50, 40, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+          ctx.beginPath();
+          ctx.arc(120, 50, 40, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+          ctx.beginPath();
+          ctx.arc(180, 50, 40, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+          ctx.beginPath();
+          ctx.arc(240, 50, 40, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      },
+      {
+        name: '裁剪',
+        draw: (ctx) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(100, 50, 40, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.fillStyle = 'red';
+          ctx.fillRect(60, 10, 80, 80);
+          ctx.restore();
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(200, 10, 80, 80);
+          ctx.clip();
+          ctx.fillStyle = 'blue';
+          ctx.fillRect(200, 10, 80, 80);
+          ctx.restore();
+        }
+      },
+      {
+        name: '曲线',
+        draw: (ctx) => {
+          ctx.beginPath();
+          ctx.moveTo(20, 80);
+          ctx.quadraticCurveTo(60, 10, 100, 80);
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(130, 80);
+          ctx.bezierCurveTo(150, 10, 190, 90, 210, 20);
+          ctx.strokeStyle = 'blue';
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(280, 50, 30, 0, Math.PI * 1.5);
+          ctx.strokeStyle = 'green';
+          ctx.stroke();
+        }
+      },
+      {
+        name: '椭圆',
+        draw: (ctx) => {
+          ctx.beginPath();
+          ctx.ellipse(100, 50, 60, 30, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'coral';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(250, 50, 50, 25, Math.PI / 4, 0, Math.PI * 2);
+          ctx.strokeStyle = 'blue';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(350, 50, 30, 40, 0, 0, Math.PI);
+          ctx.fillStyle = 'green';
+          ctx.fill();
+        }
+      },
+      {
+        name: '状态保存/恢复',
+        draw: (ctx) => {
+          ctx.fillStyle = 'red';
+          ctx.fillRect(10, 10, 40, 40);
+          ctx.save();
+          ctx.fillStyle = 'green';
+          ctx.translate(60, 0);
+          ctx.fillRect(10, 10, 40, 40);
+          ctx.save();
+          ctx.fillStyle = 'blue';
+          ctx.translate(60, 0);
+          ctx.fillRect(10, 10, 40, 40);
+          ctx.restore();
+          ctx.fillRect(100, 10, 40, 40);
+          ctx.fillStyle = 'black';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('Green: most recent state', 160, 25);
+          ctx.fillText('Blue: previous state', 160, 45);
+          ctx.fillText('Red: original state', 160, 65);
+        }
+      }
+    ];
+
+    let currentDemo = 0;
+    let ckCtx = null;
+    const nativeCanvas = document.getElementById('nativeCanvas');
+    const ckCanvas = document.getElementById('ckCanvas');
+
+    function drawNativeCanvas(index) {
+      const ctx = nativeCanvas.getContext('2d');
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 400, 100);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.strokeStyle = '#000000';
+      ctx.fillStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.lineCap = 'butt';
+      ctx.lineJoin = 'miter';
+      ctx.miterLimit = 10;
+      ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+      ctx.direction = 'inherit';
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      demos[index].draw(ctx);
+    }
+
+    function runDemo(index) {
+      currentDemo = index;
+      
+      // Update buttons
+      document.querySelectorAll('.demo-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+
+      if (!ckCtx) return;
+
+      try {
+        // Reset CanvasKit canvas
+        const ckCanvasKit = ckCtx._ckCanvas;
+        if (ckCanvasKit) {
+          const saveCount = ckCanvasKit.getSaveCount?.() || 1;
+          for (let i = saveCount - 1; i > 0; i--) {
+            try { ckCanvasKit.restore(); } catch (e) {}
+          }
+          ckCanvasKit.clear(CanvasKit.Color(255, 255, 255, 1));
+          ckCanvasKit.save();
+        }
+
+        // Reset context state
+        ckCtx._state = ckCtx._createDefaultState();
+        ckCtx._stateStack = [];
+        ckCtx._currentPath?.reset?.();
+
+        // Reset paints
+        if (ckCtx._fillPaint) {
+          ckCtx._fillPaint.setShader(null);
+          ckCtx._fillPaint.setPathEffect(null);
+          ckCtx._fillPaint.setMaskFilter(null);
+          ckCtx._fillPaint.setColorFilter(null);
+          ckCtx._fillPaint.setImageFilter(null);
+        }
+        if (ckCtx._strokePaint) {
+          ckCtx._strokePaint.setShader(null);
+          ckCtx._strokePaint.setPathEffect(null);
+          ckCtx._strokePaint.setMaskFilter(null);
+          ckCtx._strokePaint.setColorFilter(null);
+          ckCtx._strokePaint.setImageFilter(null);
+        }
+
+        demos[index].draw(ckCtx);
+        ckCtx.flush();
+      } catch (e) {
+        console.error('Demo error:', e);
+      }
+
+      drawNativeCanvas(index);
+    }
+
+    // Create demo buttons
+    function createButtons() {
+      const container = document.getElementById('buttons');
+      demos.forEach((demo, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'demo-btn' + (i === 0 ? ' active' : '');
+        btn.textContent = demo.name;
+        btn.onclick = () => runDemo(i);
+        container.appendChild(btn);
+      });
+    }
+
+    // Initialize
+    async function init() {
+      try {
+        const fontLoaded = await Canvas2D.init();
+        
+        if (!fontLoaded) {
+          throw new Error('Font loading failed');
+        }
+
+        ckCtx = Canvas2D.createCanvasContext(ckCanvas);
+        
+        document.getElementById('status').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        
+        createButtons();
+        runDemo(0);
+      } catch (e) {
+        document.getElementById('status').innerHTML = 
+          '<div class="error"><strong>Error:</strong> ' + e.message + '</div>';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
