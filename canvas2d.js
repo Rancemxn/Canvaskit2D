@@ -42,6 +42,7 @@
     CanvasKit = await global.CanvasKitInit({
       locateFile: (file) => config.canvaskitPath + file
     });
+    global.CanvasKit = CanvasKit; 
     
     if (!CanvasKit) {
       throw new Error('Failed to initialize CanvasKit');
@@ -69,6 +70,7 @@
     } catch (e) {
       // FontMgr not available
     }
+    global.FontMgr = FontMgr; 
 
     // Try to get default typeface from FontMgr
     if (FontMgr?.matchFamilyStyle) {
