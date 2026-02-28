@@ -169,12 +169,7 @@
     if (!CanvasKit) return [0, 0, 0, 1];
     if (!color) return CanvasKit.Color(0, 0, 0, 1);
 
-    if (typeof color === 'string' && CanvasKit.parseColorString) {
-      try {
-        const c = CanvasKit.parseColorString(color);
-        if (c) return c;
-      } catch (e) {}
-    }
+
     
     if (Array.isArray(color) && color.length >= 3) return color;
     if (typeof color === 'object' && color._shader) return color;
