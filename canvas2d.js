@@ -365,7 +365,7 @@
   class Path2D {
     constructor(path) {
       try {
-        if (path instanceof Path2D && path._path) {
+        if (path && path._path) {
           this._path = path._path.copy();
         } else if (typeof path === 'string' && CanvasKit) {
           this._path = CanvasKit.Path.MakeFromSVGString(path);
@@ -732,8 +732,13 @@
       
       let path = this._currentPath;
       let fillRule = 'nonzero';
-      if (ruleOrPath instanceof Path2D && ruleOrPath._path) { path = ruleOrPath._path; fillRule = rule || 'nonzero'; }
-      else if (typeof ruleOrPath === 'string') fillRule = ruleOrPath;
+      
+      if (ruleOrPath && ruleOrPath._path !== undefined) { 
+        path = ruleOrPath._path; 
+        fillRule = rule || 'nonzero'; 
+      } else if (typeof ruleOrPath === 'string') {
+        fillRule = ruleOrPath;
+      }
       
       try {
         path.setFillType(fillRule === 'evenodd' ? CanvasKit.FillType.EvenOdd : CanvasKit.FillType.Winding);
@@ -759,7 +764,10 @@
     stroke(pathOrNone) {
       if (!this._ckCanvas) return;
       
-      const path = pathOrNone instanceof Path2D && pathOrNone._path ? pathOrNone._path : this._currentPath;
+      let path = this._currentPath;
+      if (pathOrNone && pathOrNone._path !== undefined) {
+        path = pathOrNone._path;
+      }
       if (!path) return;
       
       try {
@@ -827,8 +835,13 @@
       try {
         let path = this._currentPath;
         let clipRule = 'nonzero';
-        if (ruleOrPath instanceof Path2D && ruleOrPath._path) { path = ruleOrPath._path; clipRule = rule || 'nonzero'; }
-        else if (typeof ruleOrPath === 'string') clipRule = ruleOrPath;
+        
+        if (ruleOrPath && ruleOrPath._path !== undefined) { 
+          path = ruleOrPath._path; 
+          clipRule = rule || 'nonzero'; 
+        } else if (typeof ruleOrPath === 'string') {
+          clipRule = ruleOrPath;
+        }
         
         path?.setFillType?.(clipRule === 'evenodd' ? CanvasKit.FillType.EvenOdd : CanvasKit.FillType.Winding);
         this._ckCanvas.clipPath(path, CanvasKit.ClipOp.Intersect, true);
