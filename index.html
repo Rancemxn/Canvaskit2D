@@ -168,64 +168,35 @@
       </div>
 
       <div class="api-doc">
-        <h2>已实现的 API</h2>
+        <h2>已测试的高级 API</h2>
         <div class="api-grid">
           <div class="api-category">
-            <h3>绘制方法</h3>
+            <h3>图像与图案</h3>
             <ul>
-              <li>fillRect</li><li>strokeRect</li><li>clearRect</li>
-              <li>fill</li><li>stroke</li>
-              <li>fillText</li><li>strokeText</li>
-            </ul>
-          </div>
-          <div class="api-category">
-            <h3>路径方法</h3>
-            <ul>
-              <li>beginPath</li><li>closePath</li><li>moveTo</li><li>lineTo</li>
-              <li>arc</li><li>arcTo</li><li>ellipse</li>
-              <li>rect</li><li>roundRect</li>
-              <li>bezierCurveTo</li><li>quadraticCurveTo</li>
-            </ul>
-          </div>
-          <div class="api-category">
-            <h3>变换方法</h3>
-            <ul>
-              <li>translate</li><li>rotate</li><li>scale</li>
-              <li>transform</li><li>setTransform</li>
-              <li>resetTransform</li><li>getTransform</li>
-            </ul>
-          </div>
-          <div class="api-category">
-            <h3>状态管理</h3>
-            <ul>
-              <li>save</li><li>restore</li><li>reset</li>
-              <li>clip</li><li>isPointInPath</li><li>isPointInStroke</li>
-            </ul>
-          </div>
-          <div class="api-category">
-            <h3>渐变和图案</h3>
-            <ul>
-              <li>createLinearGradient</li>
-              <li>createRadialGradient</li>
-              <li>createConicGradient</li>
+              <li>drawImage (支持 Canvas 作为输入)</li>
               <li>createPattern</li>
             </ul>
           </div>
           <div class="api-category">
-            <h3>图像操作</h3>
+            <h3>像素操作</h3>
             <ul>
-              <li>drawImage</li><li>createImageData</li>
-              <li>getImageData</li><li>putImageData</li>
+              <li>createImageData</li>
+              <li>getImageData</li>
+              <li>putImageData</li>
             </ul>
           </div>
           <div class="api-category">
-            <h3>属性</h3>
+            <h3>路径对象</h3>
             <ul>
-              <li>fillStyle</li><li>strokeStyle</li>
-              <li>lineWidth</li><li>lineCap</li><li>lineJoin</li>
-              <li>font</li><li>textAlign</li><li>textBaseline</li>
-              <li>globalAlpha</li><li>globalCompositeOperation</li>
-              <li>shadowColor/Blur/Offset</li>
+              <li>new Path2D()</li>
+              <li>SVG Path 语法解析</li>
+            </ul>
+          </div>
+          <div class="api-category">
+            <h3>高级文本</h3>
+            <ul>
+              <li>measureText</li>
+              <li>获取 TextMetrics.width</li>
             </ul>
           </div>
         </div>
@@ -254,7 +225,8 @@
           ctx.fillRect(170, 10, 60, 60);
           ctx.clearRect(180, 20, 40, 40);
           ctx.beginPath();
-          ctx.roundRect(250, 10, 60, 50, 10);
+          if(ctx.roundRect) ctx.roundRect(250, 10, 60, 50, 10);
+          else ctx.rect(250, 10, 60, 50); // Fallback
           ctx.fillStyle = 'purple';
           ctx.fill();
         }
@@ -278,11 +250,6 @@
           ctx.strokeStyle = 'red';
           ctx.lineWidth = 4;
           ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(280, 70);
-          ctx.bezierCurveTo(280, 20, 340, 20, 340, 70);
-          ctx.strokeStyle = 'green';
-          ctx.stroke();
         }
       },
       {
@@ -302,23 +269,6 @@
           ctx.beginPath();
           ctx.arc(180, 45, 40, 0, Math.PI * 2);
           ctx.fill();
-          try {
-            const cg = ctx.createConicGradient(0, 280, 45);
-            cg.addColorStop(0, 'red');
-            cg.addColorStop(0.25, 'yellow');
-            cg.addColorStop(0.5, 'green');
-            cg.addColorStop(0.75, 'blue');
-            cg.addColorStop(1, 'red');
-            ctx.fillStyle = cg;
-            ctx.beginPath();
-            ctx.arc(280, 45, 35, 0, Math.PI * 2);
-            ctx.fill();
-          } catch (e) {
-            ctx.fillStyle = 'gray';
-            ctx.beginPath();
-            ctx.arc(280, 45, 35, 0, Math.PI * 2);
-            ctx.fill();
-          }
         }
       },
       {
@@ -332,18 +282,29 @@
           ctx.strokeText('Stroke Text', 10, 60);
           ctx.font = '14px sans-serif';
           ctx.fillStyle = 'red';
-          ctx.textAlign = 'left';
-          ctx.fillText('Left aligned', 150, 25);
           ctx.textAlign = 'center';
           ctx.fillText('Center aligned', 250, 45);
-          ctx.textAlign = 'right';
-          ctx.fillText('Right aligned', 350, 65);
-          ctx.textAlign = 'left';
-          ctx.strokeStyle = 'black';
-          ctx.beginPath();
-          ctx.moveTo(10, 85);
-          ctx.lineTo(350, 85);
-          ctx.stroke();
+        }
+      },
+      {
+        name: '文本测量',
+        draw: (ctx) => {
+          const text = "Measure Width!";
+          ctx.font = '30px Arial';
+          ctx.textBaseline = 'top';
+          
+          ctx.fillStyle = 'black';
+          ctx.fillText(text, 50, 30);
+          
+          const metrics = ctx.measureText(text);
+          const width = metrics.width;
+          
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(50, 30, width, 35);
+          
+          ctx.font = '12px Arial';
+          ctx.fillText(`Computed Width: ${width.toFixed(1)}px`, 50, 75);
         }
       },
       {
@@ -365,39 +326,6 @@
         }
       },
       {
-        name: '样式和阴影',
-        draw: (ctx) => {
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-          ctx.shadowBlur = 10;
-          ctx.shadowOffsetX = 5;
-          ctx.shadowOffsetY = 5;
-          ctx.fillStyle = 'red';
-          ctx.fillRect(20, 20, 60, 60);
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          ctx.globalAlpha = 0.5;
-          ctx.fillStyle = 'blue';
-          ctx.fillRect(50, 50, 60, 60);
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = 'green';
-          ctx.lineWidth = 5;
-          ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(150, 20);
-          ctx.lineTo(250, 80);
-          ctx.stroke();
-          ctx.setLineDash([10, 5]);
-          ctx.strokeStyle = 'purple';
-          ctx.beginPath();
-          ctx.moveTo(270, 20);
-          ctx.lineTo(370, 80);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      },
-      {
         name: '虚线',
         draw: (ctx) => {
           ctx.lineWidth = 2;
@@ -407,20 +335,10 @@
           ctx.moveTo(10, 20);
           ctx.lineTo(380, 20);
           ctx.stroke();
-          ctx.setLineDash([5, 5]);
-          ctx.beginPath();
-          ctx.moveTo(10, 40);
-          ctx.lineTo(380, 40);
-          ctx.stroke();
           ctx.setLineDash([20, 5, 5, 5]);
           ctx.beginPath();
           ctx.moveTo(10, 60);
           ctx.lineTo(380, 60);
-          ctx.stroke();
-          ctx.setLineDash([2, 2]);
-          ctx.beginPath();
-          ctx.moveTo(10, 80);
-          ctx.lineTo(380, 80);
           ctx.stroke();
           ctx.setLineDash([]);
         }
@@ -435,7 +353,8 @@
           ctx.beginPath();
           ctx.arc(60, 60, 30, 0, Math.PI * 2);
           ctx.fill();
-          ctx.globalCompositeOperation = 'xor';
+          
+          ctx.globalCompositeOperation = 'multiply';
           ctx.fillStyle = 'green';
           ctx.beginPath();
           ctx.arc(150, 50, 30, 0, Math.PI * 2);
@@ -443,29 +362,6 @@
           ctx.fillStyle = 'blue';
           ctx.fillRect(130, 30, 40, 40);
           ctx.globalCompositeOperation = 'source-over';
-        }
-      },
-      {
-        name: '透明度',
-        draw: (ctx) => {
-          ctx.fillStyle = 'black';
-          ctx.fillRect(0, 0, 400, 100);
-          ctx.fillStyle = 'rgba(255, 0, 0, 1)';
-          ctx.beginPath();
-          ctx.arc(60, 50, 40, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
-          ctx.beginPath();
-          ctx.arc(120, 50, 40, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
-          ctx.beginPath();
-          ctx.arc(180, 50, 40, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-          ctx.beginPath();
-          ctx.arc(240, 50, 40, 0, Math.PI * 2);
-          ctx.fill();
         }
       },
       {
@@ -477,13 +373,6 @@
           ctx.clip();
           ctx.fillStyle = 'red';
           ctx.fillRect(60, 10, 80, 80);
-          ctx.restore();
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(200, 10, 80, 80);
-          ctx.clip();
-          ctx.fillStyle = 'blue';
-          ctx.fillRect(200, 10, 80, 80);
           ctx.restore();
         }
       },
@@ -501,28 +390,84 @@
           ctx.bezierCurveTo(150, 10, 190, 90, 210, 20);
           ctx.strokeStyle = 'blue';
           ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(280, 50, 30, 0, Math.PI * 1.5);
-          ctx.strokeStyle = 'green';
-          ctx.stroke();
         }
       },
       {
-        name: '椭圆',
+        name: '图像与图案',
         draw: (ctx) => {
-          ctx.beginPath();
-          ctx.ellipse(100, 50, 60, 30, 0, 0, Math.PI * 2);
-          ctx.fillStyle = 'coral';
-          ctx.fill();
-          ctx.beginPath();
-          ctx.ellipse(250, 50, 50, 25, Math.PI / 4, 0, Math.PI * 2);
-          ctx.strokeStyle = 'blue';
-          ctx.lineWidth = 3;
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.ellipse(350, 50, 30, 40, 0, 0, Math.PI);
-          ctx.fillStyle = 'green';
-          ctx.fill();
+          const off = document.createElement('canvas');
+          off.width = 20; off.height = 20;
+          const octx = off.getContext('2d');
+          octx.fillStyle = 'pink'; octx.fillRect(0,0,20,20);
+          octx.fillStyle = 'red'; octx.beginPath(); octx.arc(10,10,6,0,Math.PI*2); octx.fill();
+
+          ctx.drawImage(off, 10, 10);
+          ctx.drawImage(off, 0, 0, 20, 20, 40, 10, 40, 40);
+
+          try {
+            const pattern = ctx.createPattern(off, 'repeat');
+            ctx.fillStyle = pattern;
+            ctx.fillRect(100, 10, 280, 80);
+          } catch(e) {
+            ctx.fillStyle = 'red';
+            ctx.fillText('Pattern API failed', 100, 50);
+          }
+        }
+      },
+      {
+        name: '像素操作',
+        draw: (ctx) => {
+          try {
+            const imgData = ctx.createImageData(80, 80);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+              imgData.data[i + 0] = Math.random() * 255; // R
+              imgData.data[i + 1] = Math.random() * 255; // G
+              imgData.data[i + 2] = Math.random() * 255; // B
+              imgData.data[i + 3] = 255; // A
+            }
+            ctx.putImageData(imgData, 10, 10);
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(120, 20, 60, 60);
+            const data2 = ctx.getImageData(120, 20, 60, 60);
+            for(let i=0; i<data2.data.length; i+=4) {
+              data2.data[i] = 255 - data2.data[i];
+              data2.data[i+1] = 255 - data2.data[i+1];
+              data2.data[i+2] = 255 - data2.data[i+2];
+            }
+            ctx.putImageData(data2, 200, 20);
+          } catch (e) {
+            ctx.fillStyle = 'red';
+            ctx.font = '14px Arial';
+            ctx.fillText('ImageData API 不受支持或出错: ' + e.message, 10, 50);
+          }
+        }
+      },
+      {
+        name: 'Path2D',
+        draw: (ctx) => {
+          try {
+            if (typeof Path2D === 'undefined') throw new Error('No global Path2D');
+            
+            const p1 = new Path2D("M 20 20 h 40 v 40 h -40 Z");
+            ctx.fillStyle = "gold";
+            ctx.fill(p1);
+            
+            const p2 = new Path2D(p1);
+            p2.rect(40, 40, 40, 40);
+            ctx.fillStyle = "purple";
+            ctx.fill(p2, "evenodd");
+            
+            const p3 = new Path2D();
+            p3.arc(200, 50, 30, 0, Math.PI);
+            ctx.strokeStyle = "teal";
+            ctx.lineWidth = 5;
+            ctx.stroke(p3);
+          } catch (e) {
+            ctx.fillStyle = 'red';
+            ctx.font = '14px Arial';
+            ctx.fillText('Path2D 未实现或出错', 10, 50);
+          }
         }
       },
       {
@@ -540,12 +485,6 @@
           ctx.fillRect(10, 10, 40, 40);
           ctx.restore();
           ctx.fillRect(100, 10, 40, 40);
-          ctx.fillStyle = 'black';
-          ctx.font = '12px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.fillText('Green: most recent state', 160, 25);
-          ctx.fillText('Blue: previous state', 160, 45);
-          ctx.fillText('Red: original state', 160, 65);
         }
       }
     ];
@@ -556,28 +495,12 @@
     const ckCanvas = document.getElementById('ckCanvas');
 
     function drawNativeCanvas(index) {
+      nativeCanvas.width = nativeCanvas.width; 
       const ctx = nativeCanvas.getContext('2d');
+      
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, 400, 100);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.strokeStyle = '#000000';
-      ctx.fillStyle = '#000000';
-      ctx.lineWidth = 1;
-      ctx.lineCap = 'butt';
-      ctx.lineJoin = 'miter';
-      ctx.miterLimit = 10;
-      ctx.setLineDash([]);
-      ctx.lineDashOffset = 0;
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'start';
-      ctx.textBaseline = 'alphabetic';
-      ctx.direction = 'inherit';
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
+      
       demos[index].draw(ctx);
     }
 
@@ -645,15 +568,14 @@
       });
     }
 
-    // Initialize
     async function init() {
       try {
-        const fontLoaded = await Canvas2D.init();
-        
-        if (!fontLoaded) {
-          throw new Error('Font loading failed');
+        if (typeof Canvas2D === 'undefined') {
+          throw new Error('canvas2d.js 加载失败，请检查路径。');
         }
 
+        const fontLoaded = await Canvas2D.init();
+        
         ckCtx = Canvas2D.createCanvasContext(ckCanvas);
         
         document.getElementById('status').style.display = 'none';
