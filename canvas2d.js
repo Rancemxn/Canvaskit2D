@@ -323,6 +323,29 @@
       this._repetition = repetition || 'repeat';
       this._shader = null;
       this._transform = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+      if (CanvasKit) {
+        try {
+          let skImage = null;
+          if (image instanceof HTMLCanvasElement || typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement) {
+            skImage = CanvasKit.MakeImageFromCanvasImageSource(image);
+          }
+
+          if (skImage) {
+            let tmx = CanvasKit.TileMode.Repeat;
+            let tmy = CanvasKit.TileMode.Repeat;
+            if (this._repetition === 'repeat-x') tmy = CanvasKit.TileMode.Clamp;
+            if (this._repetition === 'repeat-y') tmx = CanvasKit.TileMode.Clamp;
+            if (this._repetition === 'no-repeat') {
+              tmx = CanvasKit.TileMode.Clamp;
+              tmy = CanvasKit.TileMode.Clamp;
+            }
+            this._shader = skImage.makeShaderOptions(tmx, tmy, CanvasKit.FilterMode.Linear, CanvasKit.MipmapMode.None, null);
+          }
+        } catch (e) {
+          console.warn('Pattern creation failed', e);
+        }
+      }
     }
 
     setTransform(transform) {
@@ -344,10 +367,15 @@
       try {
         if (path instanceof Path2D && path._path) {
           this._path = path._path.copy();
+        } else if (typeof path === 'string' && CanvasKit) {
+          this._path = CanvasKit.Path.MakeFromSVGString(path);
+          if (!this._path) this._path = new CanvasKit.Path();
         } else if (CanvasKit) {
           this._path = new CanvasKit.Path();
         }
-      } catch (e) {}
+      } catch (e) {
+        this._path = CanvasKit ? new CanvasKit.Path() : null;
+      }
     }
 
     addPath(path) {
@@ -938,10 +966,15 @@
         this._setupPaint(this._fillPaint, CanvasKit.PaintStyle.Fill, this._state.fillStyle);
         
         const metrics = this._font.getMetrics?.() || {};
+        const ascent = metrics.ascent || -10; 
+        const descent = metrics.descent || 2;
         const baselineMap = {
-          top: -(metrics.top || 0), hanging: -(metrics.ascent || 0),
-          middle: ((metrics.descent || 0) - (metrics.ascent || 0)) / 2,
-          alphabetic: 0, ideographic: 0, bottom: -(metrics.descent || 0)
+          top: -ascent,
+          hanging: -ascent * 0.8,
+          middle: -(ascent + descent) / 2,
+          alphabetic: 0, 
+          ideographic: descent, 
+          bottom: -descent
         };
         
         this._drawTextLine(text, x, y + (baselineMap[this._state.textBaseline] || 0), maxWidth, this._fillPaint, false);
@@ -954,10 +987,16 @@
       try {
         this._setupPaint(this._strokePaint, CanvasKit.PaintStyle.Stroke, this._state.strokeStyle);
         const metrics = this._font.getMetrics?.() || {};
+        const ascent = metrics.ascent || -10; 
+        const descent = metrics.descent || 2;
+        
         const baselineMap = {
-          top: -(metrics.top || 0), hanging: -(metrics.ascent || 0),
-          middle: ((metrics.descent || 0) - (metrics.ascent || 0)) / 2,
-          alphabetic: 0, ideographic: 0, bottom: -(metrics.descent || 0)
+          top: -ascent,
+          hanging: -ascent * 0.8,
+          middle: -(ascent + descent) / 2,
+          alphabetic: 0, 
+          ideographic: descent, 
+          bottom: -descent
         };
         this._drawTextLine(text, x, y + (baselineMap[this._state.textBaseline] || 0), maxWidth, this._strokePaint, true);
       } catch (e) {}
