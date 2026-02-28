@@ -168,6 +168,13 @@
   function parseColor(color) {
     if (!CanvasKit) return [0, 0, 0, 1];
     if (!color) return CanvasKit.Color(0, 0, 0, 1);
+
+    if (typeof color === 'string' && CanvasKit.parseColorString) {
+      try {
+        const c = CanvasKit.parseColorString(color);
+        if (c) return c;
+      } catch (e) {}
+    }
     
     if (Array.isArray(color) && color.length >= 3) return color;
     if (typeof color === 'object' && color._shader) return color;
@@ -216,12 +223,15 @@
         'orange': [1, 0.647, 0], 'purple': [0.502, 0, 0.502],
         'pink': [1, 0.753, 0.796], 'brown': [0.647, 0.165, 0.165],
         'gray': [0.502, 0.502, 0.502], 'grey': [0.502, 0.502, 0.502],
-        'transparent': [0, 0, 0],
+        'transparent': [0, 0, 0, 0],
         'coral': [1, 0.498, 0.314], 'dodgerblue': [0.118, 0.565, 1],
         'lime': [0, 1, 0], 'navy': [0, 0, 0.502], 'teal': [0, 0.502, 0.502],
         'maroon': [0.502, 0, 0], 'olive': [0.502, 0.502, 0],
         'silver': [0.753, 0.753, 0.753], 'aqua': [0, 1, 1],
-        'fuchsia': [1, 0, 1]
+        'fuchsia': [1, 0, 1],
+        'gold': [1, 0.843, 0],
+        'indigo': [0.294, 0, 0.51],
+        'violet': [0.933, 0.51, 0.933]
       };
       
       const c = named[str];
