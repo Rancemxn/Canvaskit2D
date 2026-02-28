@@ -444,21 +444,22 @@
         }
       },
       {
-        name: 'Path2D',
         draw: (ctx) => {
           try {
-            if (typeof Path2D === 'undefined') throw new Error('No global Path2D');
+            const CustomPath2D = ctx._ckCanvas ? Canvas2D.Path2D : window.Path2D;
             
-            const p1 = new Path2D("M 20 20 h 40 v 40 h -40 Z");
+            if (typeof CustomPath2D === 'undefined') throw new Error('No global Path2D');
+            
+            const p1 = new CustomPath2D("M 20 20 h 40 v 40 h -40 Z");
             ctx.fillStyle = "gold";
             ctx.fill(p1);
             
-            const p2 = new Path2D(p1);
+            const p2 = new CustomPath2D(p1);
             p2.rect(40, 40, 40, 40);
             ctx.fillStyle = "purple";
             ctx.fill(p2, "evenodd");
             
-            const p3 = new Path2D();
+            const p3 = new CustomPath2D();
             p3.arc(200, 50, 30, 0, Math.PI);
             ctx.strokeStyle = "teal";
             ctx.lineWidth = 5;
@@ -466,7 +467,8 @@
           } catch (e) {
             ctx.fillStyle = 'red';
             ctx.font = '14px Arial';
-            ctx.fillText('Path2D 未实现或出错', 10, 50);
+            ctx.fillText('Path2D API failed', 10, 50);
+            console.error('Path2D Error:', e);
           }
         }
       },
